@@ -4,7 +4,7 @@ require_once __DIR__ . '/../../config/database.php';
 require_login();
 
 $_active    = 'user';
-$page_title = 'Data Pegawai (Akun Login)';
+$page_title = 'Data Pegawai';
 
 /* ============ DETEKSI KOLOM PENTING DI users ============ */
 $user_pk_col   = pick_column('users', ['user_id','id','uid']) ?: 'user_id';
@@ -92,7 +92,7 @@ if ($has_start) include __DIR__ . '/../_partials/layout_start.php';
 <?php endif; ?>
 
 <div class="card">
-  <h2 style="margin-bottom:12px">Data Pegawai (Akun Login)</h2>
+  <h2 style="margin-bottom:12px">Data Pegawai</h2>
 
   <div class="kpi">
     <div class="card"><div class="muted">Total Akun</div><h1><?= number_format($total) ?></h1></div>
