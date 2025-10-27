@@ -45,10 +45,13 @@ $role_col       = pick_column('users', ['role','user_role','level','role_name'])
 $avatar_col     = pick_column('users', ['avatar_path','avatar','photo','profile_pic']) ?: null;
 $theme_col      = pick_column('users', ['theme','user_theme','pref_theme']) ?: null;
 
-/* Apakah kita perlu refresh data user dari DB? */
+/* Perlu refresh ke DB? */
 $need_fetch = false;
 if (!empty($sessionUser['user_id'])) {
-  if (empty($sessionUser['nama']) || empty($sessionUser['username']) || !array_key_exists('avatar_path', $sessionUser) || !array_key_exists('theme', $sessionUser) || !isset($sessionUser['role'])) {
+  if (empty($sessionUser['nama']) || empty($sessionUser['username'])
+      || !array_key_exists('avatar_path', $sessionUser)
+      || !array_key_exists('theme', $sessionUser)
+      || !isset($sessionUser['role'])) {
     $need_fetch = true;
   }
 }
@@ -87,13 +90,13 @@ if ($need_fetch) {
 
 /* Normalisasi nilai user agar ada key yang dipakai di layout */
 $user = $sessionUser;
-$user['user_id']   = (int)($user['user_id'] ?? $user['id'] ?? 0);
-$user['nama']      = trim((string)($user['nama'] ?? $user['name'] ?? ''));
-$user['username']  = trim((string)($user['username'] ?? $user['login'] ?? ''));
-$user['email']     = trim((string)($user['email'] ?? ''));
-$user['role']      = (string)($user['role'] ?? $user['role_name'] ?? '');
+$user['user_id']    = (int)($user['user_id'] ?? $user['id'] ?? 0);
+$user['nama']       = trim((string)($user['nama'] ?? $user['name'] ?? ''));
+$user['username']   = trim((string)($user['username'] ?? $user['login'] ?? ''));
+$user['email']      = trim((string)($user['email'] ?? ''));
+$user['role']       = (string)($user['role'] ?? $user['role_name'] ?? '');
 $user['avatar_path']= $user['avatar_path'] ?? ($user['avatar'] ?? null);
-$user['theme']     = in_array($user['theme'] ?? 'light', ['light','dark','system'], true) ? $user['theme'] : 'light';
+$user['theme']      = in_array($user['theme'] ?? 'light', ['light','dark','system'], true) ? $user['theme'] : 'light';
 
 /* Tampilan & avatar */
 $role        = $user['role'] ?? '';
@@ -109,7 +112,7 @@ $isOperasional  = $isDirektur || ($role !== '' && strcasecmp($role, 'staff_opera
 /* Halaman aktif & tema */
 $page_title = $page_title ?? 'Dashboard';
 $_active    = $_active ?? '';
-$theme = $user['theme'] ?? 'light';
+$theme      = $user['theme'] ?? 'light';
 if (!in_array($theme, ['light','dark','system'], true)) $theme = 'light';
 ?>
 <!DOCTYPE html>
@@ -160,7 +163,7 @@ if (!in_array($theme, ['light','dark','system'], true)) $theme = 'light';
   .sidebar{
     width:240px;background:var(--panel);border-right:1px solid var(--line);
     display:flex;flex-direction:column;justify-content:space-between;
-    transition:width .2s ease; overflow:hidden;
+    transition:width .2s ease; overflow:hidden; /* penting supaya teks tak mendorong lebar */
   }
   .sidebar h1{margin:0;padding:18px;font-size:20px;font-weight:700;color:var(--text);border-bottom:1px solid var(--line)}
   .brand{display:flex;align-items:center;justify-content:space-between}
@@ -209,7 +212,7 @@ if (!in_array($theme, ['light','dark','system'], true)) $theme = 'light';
     <div>
       <h1 class="brand">
         <span>CV GMB.</span>
-        <button id="toggleSidebar" class="sidebar-toggle" aria-label="Ciutkan sidebar" title="Ciutkan/luaskan sidebar">
+        <button id="toggleSidebar" type="button" class="sidebar-toggle" aria-label="Ciutkan sidebar" title="Ciutkan/luaskan sidebar">
           <i class="fa-solid fa-angle-left"></i>
         </button>
       </h1>
@@ -249,3 +252,59 @@ if (!in_array($theme, ['light','dark','system'], true)) $theme = 'light';
     </header>
 
     <main>
+      <!-- Konten halaman dimulai di sini -->
+      <!-- (layout_end.php akan menutup main/content/layout/body/html) -->
+
+      <!-- Toggle Sidebar Script (aman dipasang di layout_start karena pakai DOMContentLoaded) -->
+      <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        const KEY = 'sb_collapsed';
+        const sidebar = document.getElementById('sidebar');
+        const btn = document.getElementById('toggleSidebar');
+        if (!sidebar || !btn) return;
+
+        // pastikan bukan submit
+        if (!btn.getAttribute('type')) btn.setAttribute('type','button');
+
+        const icon = btn.querySelector('i');
+        const isCollapsed = () => sidebar.classList.contains('collapsed');
+
+        const refresh = () => {
+          const collapsed = isCollapsed();
+          document.querySelectorAll('.sidebar .menu a').forEach(a => {
+            const label = a.querySelector('.label')?.textContent?.trim() || '';
+            if (collapsed && label) a.setAttribute('title', label); else a.removeAttribute('title');
+          });
+          btn.setAttribute('aria-expanded', String(!collapsed));
+          btn.setAttribute('aria-label', collapsed ? 'Luaskan sidebar' : 'Ciutkan sidebar');
+          if (icon) {
+            icon.classList.remove('fa-angle-left','fa-angle-right');
+            icon.classList.add(collapsed ? 'fa-angle-right' : 'fa-angle-left');
+          }
+        };
+
+        const setCollapsed = (state) => {
+          sidebar.classList.toggle('collapsed', state);
+          try { localStorage.setItem(KEY, state ? '1' : '0'); } catch(e){}
+          refresh();
+        };
+
+        // apply initial tanpa “kedip”
+        const prev = sidebar.style.transition; sidebar.style.transition = 'none';
+        setCollapsed(localStorage.getItem(KEY) === '1');
+        requestAnimationFrame(() => { sidebar.style.transition = prev || ''; });
+
+        btn.addEventListener('click', () => setCollapsed(!isCollapsed()));
+
+        // auto-collapse layar kecil; tidak memaksa expand saat kembali lebar
+        const mq = window.matchMedia('(max-width: 900px)');
+        const applyMQ = () => { if (mq.matches) setCollapsed(true); else refresh(); };
+        mq.addEventListener?.('change', applyMQ); applyMQ();
+
+        // pintasan: Ctrl/Cmd + B
+        window.addEventListener('keydown', (e) => {
+          const k = (e.key||'').toLowerCase();
+          if ((e.ctrlKey||e.metaKey) && k==='b'){ e.preventDefault(); setCollapsed(!isCollapsed()); }
+        });
+      });
+      </script>
