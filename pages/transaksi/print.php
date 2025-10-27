@@ -184,7 +184,7 @@ $hasActiveFilter = ($filter !== 'all') || ($range !== 'bulan') ||
       <th style="width:110px">Tanggal</th>
       <th style="width:120px">Tipe</th>
       <th class="right" style="width:140px">Nominal</th>
-      <th style="width:120px">Metode</th>
+      <th style="width:120px"></th>
       <th>Keterangan</th>
       <th style="width:160px">Dibuat Oleh</th>
     </tr>
