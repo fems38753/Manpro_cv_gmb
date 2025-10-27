@@ -139,29 +139,58 @@ if (!in_array($theme, ['light','dark','system'], true)) $theme = 'light';
 
   <!-- Hormati override tema di semua halaman -->
   <script>
-(function(){
-  const root   = document.documentElement;
-  const server = root.getAttribute('data-theme') || 'light';
-  if (server === 'light' || server === 'dark') {
-    localStorage.setItem('theme_override', server);
-    root.setAttribute('data-theme', server);
-  } else {
-    localStorage.removeItem('theme_override');
-    if (window.matchMedia) {
-      const mq = window.matchMedia('(prefers-color-scheme: dark)');
-      const apply = () => root.setAttribute('data-theme', mq.matches ? 'dark' : 'light');
-      apply();
-      mq.addEventListener?.('change', apply);
-    }
-  }
-})();
+document.addEventListener('DOMContentLoaded', function () {
+  const KEY = 'sb_collapsed';
+  const sidebar = document.getElementById('sidebar');
+  const btn = document.getElementById('toggleSidebar');
+
+  if (!sidebar || !btn) return; // guard kalau id tidak ketemu
+
+  // Terapkan status awal dari localStorage
+  if (localStorage.getItem(KEY) === '1') sidebar.classList.add('collapsed');
+
+  const refreshTitles = () => {
+    const collapsed = sidebar.classList.contains('collapsed');
+    document.querySelectorAll('.sidebar .menu a').forEach(a => {
+      const label = a.querySelector('.label')?.textContent?.trim() || '';
+      if (collapsed && label) a.setAttribute('title', label);
+      else a.removeAttribute('title');
+    });
+    btn.setAttribute('aria-expanded', String(!collapsed));
+    btn.setAttribute('aria-label', collapsed ? 'Luaskan sidebar' : 'Ciutkan sidebar');
+  };
+
+  refreshTitles();
+
+  btn.addEventListener('click', () => {
+    sidebar.classList.toggle('collapsed');
+    localStorage.setItem(KEY, sidebar.classList.contains('collapsed') ? '1' : '0');
+    refreshTitles();
+  });
+
+  // Opsional: auto-collapse di layar sempit
+  const mq = window.matchMedia('(max-width: 900px)');
+  const applyMQ = () => {
+    if (mq.matches) { sidebar.classList.add('collapsed'); localStorage.setItem(KEY, '1'); }
+    refreshTitles();
+  };
+  mq.addEventListener?.('change', applyMQ);
+  applyMQ();
+});
 </script>
 
   <style>
   *{box-sizing:border-box}
 body{margin:0;font-family:"Poppins",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--text);background:var(--bg)}
 .layout{display:flex;min-height:100vh}
-.sidebar{width:240px;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;justify-content:space-between}
+.sidebar{
+  width:240px;
+  background:var(--panel);
+  border-right:1px solid var(--line);
+  display:flex; flex-direction:column; justify-content:space-between;
+  transition:width .2s ease;
+  overflow:hidden; /* penting saat collapsed */
+}
 .sidebar h1{margin:0;padding:18px;font-size:20px;font-weight:700;color:var(--text);border-bottom:1px solid var(--line)}
 .menu{padding:8px 10px}
 .menu a{display:flex;gap:10px;align-items:center;padding:12px;border-radius:10px;margin:4px 0;color:var(--text);text-decoration:none}
@@ -177,38 +206,88 @@ main{padding:18px;flex:1}
 footer{background:var(--panel);border-top:1px solid var(--line);color:var(--muted);font-size:13px;text-align:center;padding:10px}
 .btn{display:inline-flex;align-items:center;gap:8px;cursor:pointer;background:var(--brand);color:#fff;border:1px solid transparent;padding:8px 12px;border-radius:10px}
 .btn.outline{background:transparent;color:var(--brand-2);border:1px solid var(--sand)}
+/* --- Sidebar toggle button --- */
+.brand{display:flex; align-items:center; justify-content:space-between}
+.sidebar-toggle{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:32px; height:32px; border:1px solid var(--line);
+  background:var(--panel); color:var(--text); border-radius:8px; cursor:pointer;
+  transition:transform .2s ease;
+}
+.sidebar-toggle:focus{outline:2px solid var(--brand-2); outline-offset:2px}
 
+/* --- Transition niceness --- */
+.sidebar{width:240px; transition:width .2s ease}
+.menu a{transition:background .2s ease, color .2s ease, padding .2s ease}
+.menu a i{min-width:22px; text-align:center; font-size:18px}
+
+/* --- Collapsed state --- */
+.sidebar.collapsed{width:72px}
+.sidebar.collapsed h1 span{display:none}          /* sembunyikan teks "CV GMB." */
+.sidebar.collapsed .sidebar-toggle i{transform:rotate(180deg)}  /* arah panah */
+
+.sidebar.collapsed .menu a{
+  justify-content:center; gap:0; padding:12px 10px;
+}
+.sidebar.collapsed .menu a .label{      /* sembunyikan label menu */
+  position:absolute; opacity:0; pointer-events:none; width:0; height:0; overflow:hidden;
+}
+
+/* Ikon tetap rapi di tengah */
+.sidebar.collapsed .menu a i{margin:0}
+
+/* Tooltip sederhana via title attr saat collapsed */
+.sidebar.collapsed .menu a[title]{position:relative}
 </style>
 </head>
 <body>
 <div class="layout">
 
   <!-- Sidebar -->
-  <aside class="sidebar">
-    <div>
-      <h1>CV GMB.</h1>
-      <div class="menu">
-        <a class="<?=($_active==='dashboard'?'active':'')?>" href="<?=asset_url('pages/dashboard/index.php')?>"><i class="fas fa-house"></i> Dashboard</a>
+  <!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div>
+    <h1 class="brand">
+      <span>CV GMB.</span>
+      <button id="toggleSidebar" class="sidebar-toggle" aria-label="Ciutkan sidebar" title="Ciutkan/luaskan sidebar">
+        <i class="fas fa-angle-left"></i>
+      </button>
+    </h1>
 
-        <?php if($isKeuangan): ?>
-          <a class="<?=($_active==='transaksi'?'active':'')?>" href="<?=asset_url('pages/transaksi/index.php')?>"><i class="fas fa-receipt"></i> Transaksi</a>
-          <a class="<?=($_active==='penjualan'?'active':'')?>" href="<?=asset_url('pages/penjualan/index.php')?>"><i class="fas fa-cart-shopping"></i> Penjualan</a>
-        <?php endif; ?>
-
-        <?php if($isOperasional): ?>
-          <a class="<?=($_active==='stok'?'active':'')?>" href="<?=asset_url('pages/stok/index.php')?>"><i class="fas fa-boxes-stacked"></i> Pengelolaan Stok</a>
-          <a class="<?=($_active==='pembelian'?'active':'')?>" href="<?=asset_url('pages/pembelian/index.php')?>"><i class="fas fa-truck"></i> Pembelian</a>
-        <?php endif; ?>
-
-        <?php if($isDirektur): ?>
-          <a class="<?=($_active==='user'?'active':'')?>" href="<?=asset_url('pages/pegawai/index.php')?>"><i class="fas fa-users"></i> User</a>
-        <?php endif; ?>
-      </div>
-    </div>
     <div class="menu">
-      <a href="<?=asset_url('auth/logout.php')?>"><i class="fas fa-right-from-bracket"></i> Logout</a>
+      <a class="<?=($_active==='dashboard'?'active':'')?>" href="<?=asset_url('pages/dashboard/index.php')?>">
+        <i class="fas fa-house"></i> <span class="label">Dashboard</span>
+      </a>
+
+      <?php if($isKeuangan): ?>
+        <a class="<?=($_active==='transaksi'?'active':'')?>" href="<?=asset_url('pages/transaksi/index.php')?>">
+          <i class="fas fa-receipt"></i> <span class="label">Transaksi</span>
+        </a>
+        <a class="<?=($_active==='penjualan'?'active':'')?>" href="<?=asset_url('pages/penjualan/index.php')?>">
+          <i class="fas fa-cart-shopping"></i> <span class="label">Penjualan</span>
+        </a>
+      <?php endif; ?>
+
+      <?php if($isOperasional): ?>
+        <a class="<?=($_active==='stok'?'active':'')?>" href="<?=asset_url('pages/stok/index.php')?>">
+          <i class="fas fa-boxes-stacked"></i> <span class="label">Pengelolaan Stok</span>
+        </a>
+        <a class="<?=($_active==='pembelian'?'active':'')?>" href="<?=asset_url('pages/pembelian/index.php')?>">
+          <i class="fas fa-truck"></i> <span class="label">Pembelian</span>
+        </a>
+      <?php endif; ?>
+
+      <?php if($isDirektur): ?>
+        <a class="<?=($_active==='user'?'active':'')?>" href="<?=asset_url('pages/pegawai/index.php')?>">
+          <i class="fas fa-users"></i> <span class="label">User</span>
+        </a>
+      <?php endif; ?>
     </div>
-  </aside>
+  </div>
+  <div class="menu">
+    <a href="<?=asset_url('auth/logout.php')?>"><i class="fas fa-right-from-bracket"></i> <span class="label">Logout</span></a>
+  </div>
+</aside>
 
   <!-- Konten utama -->
   <div class="content">

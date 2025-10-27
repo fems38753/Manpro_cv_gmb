@@ -81,7 +81,7 @@ body {
   flex-direction:column;
   justify-content:space-between;
 }
-.sidebar h1 { margin: 0; padding: 18px 0 14px; font-size: 20px; font-weight: 700; color: var(--brand-2); border-bottom: 1px solid var(--line) }
+.sidebar h1 { margin: 0; padding: 18px 0 14px; font-size: 30px; font-weight: 700; color: var(--brand-2); border-bottom: 1px solid var(--line) }
 .menu { padding: 8px 10px }
 .menu a {
   display: flex; gap: 10px; align-items: center;
@@ -369,3 +369,4 @@ html[data-theme="dark"]{ --hover: rgba(255,187,56,.10); }
   color:#2ecc71;
   border-color: color-mix(in srgb, #2ecc71 65%, var(--line));
 }
+
