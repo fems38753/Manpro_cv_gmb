@@ -15,9 +15,6 @@ if ($uid <= 0) {
 }
 
 /* ----- DETEKSI KOLOM USERS ----- */
-/* Kita akan memilih kolom yang tersedia dan alias ke nama standar:
-   user_id, nama, username, email, role, avatar_path, password_hash, theme
-*/
 $user_pk_col = pick_column('users', ['user_id','id','uid']) ?: 'user_id';
 $name_col    = pick_column('users', ['nama','name','full_name','fullname']) ?: null;
 $username_col= pick_column('users', ['username','user_name','login','login_name']) ?: null;
@@ -27,7 +24,7 @@ $avatar_col  = pick_column('users', ['avatar_path','avatar','photo','profile_pic
 $password_col= pick_column('users', ['password_hash','password','passwd']) ?: null;
 $theme_col   = pick_column('users', ['theme','user_theme','pref_theme']) ?: null;
 
-/* Build SELECT parts: alias semua ke nama standar */
+/* Build SELECT */
 $select = [];
 $select[] = "u.`$user_pk_col` AS user_id";
 $select[] = $name_col ? "COALESCE(u.`$name_col`,'') AS nama" : "'' AS nama";
@@ -46,7 +43,6 @@ if (!$user) {
   redirect('auth/login.php');
 }
 
-/* Short flags whether certain columns exist so we can guard behavior */
 $has_password_col = (bool)$password_col;
 $has_role_col     = (bool)$role_col;
 $has_avatar_col   = (bool)$avatar_col;
@@ -63,7 +59,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $errors[] = 'Sesi kadaluarsa. Muat ulang halaman.';
   }
 
-  // ambil input
   $nama     = trim($_POST['nama'] ?? '');
   $username = trim($_POST['username'] ?? '');
   $theme    = $_POST['theme'] ?? ($user['theme'] ?? 'light');
@@ -72,17 +67,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if ($username === '') $errors[] = 'Username wajib diisi.';
   if (!in_array($theme, ['light','dark','system'], true)) $theme = 'light';
 
-  // cek unik username (gunakan kolom detected)
-  if (!$errors) {
-    if ($username_col) {
-      $q = "SELECT `$user_pk_col` FROM users WHERE `$username_col` = ? AND `$user_pk_col` <> ? LIMIT 1";
-      if (fetch($q, [$username, $uid])) $errors[] = 'Username sudah digunakan akun lain.';
-    } else {
-      // kalau tidak ada kolom username di DB (jarang), skip uniqueness check
-    }
+  if (!$errors && $username_col) {
+    $q = "SELECT `$user_pk_col` FROM users WHERE `$username_col` = ? AND `$user_pk_col` <> ? LIMIT 1";
+    if (fetch($q, [$username, $uid])) $errors[] = 'Username sudah digunakan akun lain.';
   }
 
-  // password opsional: hanya jika ada kolom password
+  // ganti password opsional
   $oldpass   = $_POST['old_password'] ?? '';
   $newpass   = $_POST['new_password'] ?? '';
   $newpass2  = $_POST['new_password2'] ?? '';
@@ -94,7 +84,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
       if (strlen($newpass) < 6) $errors[] = 'Password baru minimal 6 karakter.';
       if ($newpass !== $newpass2) $errors[] = 'Konfirmasi password baru tidak sama.';
-      // verify old password
       if (!password_verify($oldpass, (string)$user['password_hash'])) {
         $errors[] = 'Password lama salah.';
       }
@@ -113,7 +102,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       if (strpos($p, $app) === 0) $p = substr($p, strlen($app));
       $avatar_path = ltrim($p, '/');
 
-      // hapus avatar lama jika berasal dari uploads/profile
       $old = $user['avatar_path'] ?? null;
       if ($old && str_starts_with($old, 'uploads/profile/')) {
         $absOld = APP_DIR . '/' . str_replace('/', DIRECTORY_SEPARATOR, $old);
@@ -124,40 +112,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   // simpan ke DB
   if (!$errors) {
-    // susun SET dinamis, gunakan detected column names
-    $sets = [];
-    $args = [];
+    $sets = []; $args = [];
 
-    // nama
-    if ($name_col) {
-      $sets[] = "`$name_col` = ?";
-      $args[] = $nama;
-    } else {
-      // aliasing: if DB has no name column, update a column 'nama' doesn't exist — skip
-    }
-
-    // username
-    if ($username_col) {
-      $sets[] = "`$username_col` = ?";
-      $args[] = $username;
-    }
-
-    // avatar
-    if ($has_avatar_col) {
-      $sets[] = "`$avatar_col` = ?";
-      $args[] = $avatar_path;
-    }
-
-    // theme
-    if ($has_theme_col) {
-      $sets[] = "`$theme_col` = ?";
-      $args[] = $theme;
-    }
-
-    // password
+    if ($name_col)     { $sets[] = "`$name_col` = ?";     $args[] = $nama; }
+    if ($username_col) { $sets[] = "`$username_col` = ?"; $args[] = $username; }
+    if ($has_avatar_col){$sets[] = "`$avatar_col` = ?";   $args[] = $avatar_path; }
+    if ($has_theme_col) { $sets[] = "`$theme_col` = ?";   $args[] = $theme; }
     if ($want_change_pwd && $has_password_col) {
-      $sets[] = "`$password_col` = ?";
-      $args[] = password_hash($newpass, PASSWORD_BCRYPT);
+      $sets[] = "`$password_col` = ?"; $args[] = password_hash($newpass, PASSWORD_BCRYPT);
     }
 
     if (empty($sets)) {
@@ -167,7 +129,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $args[] = $uid;
       query($sql, $args);
 
-      // segarkan sesi (alias key names tetap sama seperti sebelumnya: nama, username, avatar_path, theme)
       $_SESSION['user']['nama'] = $nama;
       $_SESSION['user']['username'] = $username;
       if ($has_avatar_col) $_SESSION['user']['avatar_path'] = $avatar_path;
@@ -178,15 +139,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 }
 
-/* =========================
-   Siapkan URL avatar preview
-   ========================= */
+/* Avatar preview URL */
 $label      = strtoupper(substr(($user['nama'] ?: ($user['username'] ?? 'U')), 0, 1));
 $avatar_url = avatar_url($user['avatar_path'] ?? null, $label);
 
-/* =========================
-   Render
-   ========================= */
+/* Render */
 include __DIR__ . '/../_partials/layout_start.php';
 ?>
 <div class="card" style="max-width:900px">
@@ -309,12 +266,12 @@ function previewAvatar(e){
 
 (function(){
   const root  = document.documentElement;
-  const btn   = document.getElementById('toggleTheme'); // tombol cepat
+  const btn   = document.getElementById('toggleTheme');   // tombol cepat (Dark/Light)
   const label = btn?.querySelector('.label');
   const icon  = btn?.querySelector('i');
   const radios = document.querySelectorAll('input[name="theme"]');
 
-  let mq = null;   // MediaQueryList untuk "system"
+  let mq = null;   // MediaQueryList saat mode system
   let onMQ = null; // handler perubahan OS
 
   function uiRefresh(){
@@ -325,57 +282,49 @@ function previewAvatar(e){
   }
 
   function stopSystemListener(){
-    if (mq && onMQ) { mq.removeEventListener?.('change', onMQ); }
+    if (mq && onMQ) mq.removeEventListener?.('change', onMQ);
     mq = null; onMQ = null;
   }
 
   function setTheme(mode){
     if (mode === 'system') {
-      // Hapus override dan ikut OS
-      localStorage.removeItem('theme_override');
+      // Persist pilihan system: semua halaman akan ikut OS
+      localStorage.setItem('theme_override', 'system');
       stopSystemListener();
       mq = window.matchMedia('(prefers-color-scheme: dark)');
       onMQ = () => root.setAttribute('data-theme', mq.matches ? 'dark' : 'light');
-      onMQ(); // apply sekarang
+      onMQ();
       mq.addEventListener?.('change', onMQ);
     } else if (mode === 'light' || mode === 'dark') {
       stopSystemListener();
       localStorage.setItem('theme_override', mode);
       root.setAttribute('data-theme', mode);
     }
-    // Sinkronkan radio (agar jelas di UI)
     const r = document.querySelector(`input[name="theme"][value="${mode}"]`);
     if (r) r.checked = true;
     uiRefresh();
-    // Optional hook
     if (typeof window.refreshChartsTheme === 'function') window.refreshChartsTheme();
   }
 
-  // Inisialisasi: hormati state yang sudah dipasang di layout_start.php
+  // Inisialisasi: hormati state dari layout_start.php
   uiRefresh();
 
-  // --- Event radio (Light/Dark/System) ---
-  radios.forEach(r => {
-    r.addEventListener('change', (e) => {
-      const v = e.target.value;
-      setTheme(v);
-    });
-  });
+  // Radio Light/Dark/System
+  radios.forEach(r => r.addEventListener('change', e => setTheme(e.target.value)));
 
-  // --- Tombol cepat (flip Light/Dark) ---
+  // Tombol cepat (flip Light/Dark)
   if (btn) {
     btn.addEventListener('click', () => {
-      const cur = root.getAttribute('data-theme') || 'light';
+      const cur  = root.getAttribute('data-theme') || 'light';
       const next = (cur === 'dark') ? 'light' : 'dark';
-      setTheme(next); // ini otomatis memindahkan radio dari "system" ke mode yang dipilih
+      setTheme(next);
     });
   }
 
-  // Jika saat halaman dibuka radio sudah pada "system", pastikan override dibersihkan sekarang juga
+  // Jika radio awal sudah System, aktifkan listener OS sekarang juga
   const checked = document.querySelector('input[name="theme"]:checked')?.value;
   if (checked === 'system') setTheme('system');
 })();
 </script>
-
 
 <?php include __DIR__ . '/../_partials/layout_end.php'; ?>
