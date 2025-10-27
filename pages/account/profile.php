@@ -307,42 +307,75 @@ function previewAvatar(e){
   else { img.removeAttribute('src'); img.style.display='none'; }
 }
 
-// Toggle cepat tema (client-side override; simpan ke akun via tombol Simpan)
 (function(){
   const root  = document.documentElement;
-  const btn   = document.getElementById('toggleTheme');
-  if (!btn) return;
+  const btn   = document.getElementById('toggleTheme'); // tombol cepat
+  const label = btn?.querySelector('.label');
+  const icon  = btn?.querySelector('i');
+  const radios = document.querySelectorAll('input[name="theme"]');
 
-  const label = btn.querySelector('.label');
-  const icon  = btn.querySelector('i');
+  let mq = null;   // MediaQueryList untuk "system"
+  let onMQ = null; // handler perubahan OS
 
-  // Jangan set apa pun di sini: layout_start.php sudah menetapkan data-theme yang benar.
   function uiRefresh(){
     const cur = root.getAttribute('data-theme') || 'light';
     const isDark = (cur === 'dark');
     if (label) label.textContent = isDark ? 'Light' : 'Dark';
     if (icon) { icon.classList.toggle('fa-moon', !isDark); icon.classList.toggle('fa-sun', isDark); }
   }
+
+  function stopSystemListener(){
+    if (mq && onMQ) { mq.removeEventListener?.('change', onMQ); }
+    mq = null; onMQ = null;
+  }
+
+  function setTheme(mode){
+    if (mode === 'system') {
+      // Hapus override dan ikut OS
+      localStorage.removeItem('theme_override');
+      stopSystemListener();
+      mq = window.matchMedia('(prefers-color-scheme: dark)');
+      onMQ = () => root.setAttribute('data-theme', mq.matches ? 'dark' : 'light');
+      onMQ(); // apply sekarang
+      mq.addEventListener?.('change', onMQ);
+    } else if (mode === 'light' || mode === 'dark') {
+      stopSystemListener();
+      localStorage.setItem('theme_override', mode);
+      root.setAttribute('data-theme', mode);
+    }
+    // Sinkronkan radio (agar jelas di UI)
+    const r = document.querySelector(`input[name="theme"][value="${mode}"]`);
+    if (r) r.checked = true;
+    uiRefresh();
+    // Optional hook
+    if (typeof window.refreshChartsTheme === 'function') window.refreshChartsTheme();
+  }
+
+  // Inisialisasi: hormati state yang sudah dipasang di layout_start.php
   uiRefresh();
 
-  btn.addEventListener('click', () => {
-    const cur  = root.getAttribute('data-theme') || 'light';
-    const next = (cur === 'dark') ? 'light' : 'dark';
-
-    // Terapkan ke UI + simpan sebagai override browser
-    root.setAttribute('data-theme', next);
-    localStorage.setItem('theme_override', next);
-
-    // Sinkronkan radio di form agar kalau user klik Simpan, preferensi akun ikut berubah
-    const r = document.querySelector(`input[name="theme"][value="${next}"]`);
-    if (r) r.checked = true;
-
-    // Optional hook untuk chart/komponen lain
-    if (typeof window.refreshChartsTheme === 'function') window.refreshChartsTheme();
-
-    uiRefresh();
+  // --- Event radio (Light/Dark/System) ---
+  radios.forEach(r => {
+    r.addEventListener('change', (e) => {
+      const v = e.target.value;
+      setTheme(v);
+    });
   });
+
+  // --- Tombol cepat (flip Light/Dark) ---
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const cur = root.getAttribute('data-theme') || 'light';
+      const next = (cur === 'dark') ? 'light' : 'dark';
+      setTheme(next); // ini otomatis memindahkan radio dari "system" ke mode yang dipilih
+    });
+  }
+
+  // Jika saat halaman dibuka radio sudah pada "system", pastikan override dibersihkan sekarang juga
+  const checked = document.querySelector('input[name="theme"]:checked')?.value;
+  if (checked === 'system') setTheme('system');
 })();
 </script>
+
 
 <?php include __DIR__ . '/../_partials/layout_end.php'; ?>

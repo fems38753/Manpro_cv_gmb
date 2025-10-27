@@ -145,27 +145,31 @@ document.addEventListener('DOMContentLoaded', function () {
   const btn = document.getElementById('toggleSidebar');
   if (!sidebar || !btn) return;
 
-  // ---------- helpers ----------
+  const icon = btn.querySelector('i');
+
+  // fungsi: apakah sedang collapsed?
   const isCollapsed = () => sidebar.classList.contains('collapsed');
 
+  // fungsi: perbarui arah ikon dan tooltip
   const refresh = () => {
     const collapsed = isCollapsed();
 
-    // title tooltip saat collapsed
+    // atur title menu
     document.querySelectorAll('.sidebar .menu a').forEach(a => {
       const label = a.querySelector('.label')?.textContent?.trim() || '';
       if (collapsed && label) a.setAttribute('title', label);
       else a.removeAttribute('title');
     });
 
-    // ARIA + ikon panah
+    // arah panah (ubah kelas Font Awesome)
+    if (icon) {
+      icon.classList.remove('fa-angle-left', 'fa-angle-right');
+      icon.classList.add(collapsed ? 'fa-angle-right' : 'fa-angle-left');
+    }
+
+    // atribut aksesibilitas
     btn.setAttribute('aria-expanded', String(!collapsed));
     btn.setAttribute('aria-label', collapsed ? 'Luaskan sidebar' : 'Ciutkan sidebar');
-    const icon = btn.querySelector('i');
-    if (icon) {
-      icon.classList.toggle('fa-angle-left', !collapsed);
-      icon.classList.toggle('fa-angle-right', collapsed);
-    }
   };
 
   const setCollapsed = (state) => {
@@ -174,32 +178,29 @@ document.addEventListener('DOMContentLoaded', function () {
     refresh();
   };
 
-  // ---------- apply initial state (tanpa animasi pertama kali) ----------
+  // Terapkan status awal dari localStorage (tanpa animasi awal)
   const prevTransition = sidebar.style.transition;
   sidebar.style.transition = 'none';
-  setCollapsed(localStorage.getItem(KEY) === '1');
+  const startCollapsed = localStorage.getItem(KEY) === '1';
+  sidebar.classList.toggle('collapsed', startCollapsed);
+  refresh();
   requestAnimationFrame(() => { sidebar.style.transition = prevTransition || ''; });
 
-  // ---------- events ----------
+  // klik tombol panah
   btn.addEventListener('click', () => setCollapsed(!isCollapsed()));
 
-  // Auto-collapse hanya saat layar sempit; tidak memaksa expand saat kembali lebar
+  // otomatis collapse di layar kecil
   const mq = window.matchMedia('(max-width: 900px)');
   const applyMQ = () => {
     if (mq.matches) setCollapsed(true);
-    else refresh(); // hormati preferensi user
+    else refresh();
   };
   mq.addEventListener?.('change', applyMQ);
   applyMQ();
-
-  // Pintasan keyboard: Ctrl/Cmd + B toggle, Esc untuk expand cepat
-  window.addEventListener('keydown', (e) => {
-    const key = (e.key || '').toLowerCase();
-    if ((e.ctrlKey || e.metaKey) && key === 'b') { e.preventDefault(); setCollapsed(!isCollapsed()); }
-    if (key === 'escape' && isCollapsed()) setCollapsed(false);
-  });
 });
 </script>
+
+
 
 
   <style>
@@ -247,7 +248,7 @@ footer{background:var(--panel);border-top:1px solid var(--line);color:var(--mute
 /* --- Collapsed state --- */
 .sidebar.collapsed{width:72px}
 .sidebar.collapsed h1 span{display:none}          /* sembunyikan teks "CV GMB." */
-.sidebar.collapsed .sidebar-toggle i{transform:rotate(180deg)}  /* arah panah */
+.sidebar.collapsed .sidebar-toggle i{ transform: none; }  /* arah panah */
 
 .sidebar.collapsed .menu a{
   justify-content:center; gap:0; padding:12px 10px;
@@ -261,21 +262,24 @@ footer{background:var(--panel);border-top:1px solid var(--line);color:var(--mute
 
 /* Tooltip sederhana via title attr saat collapsed */
 .sidebar.collapsed .menu a[title]{position:relative}
+
+.sidebar-toggle i {
+  transition: transform .25s ease, color .2s ease;
+}
 </style>
 </head>
 <body>
 <div class="layout">
 
   <!-- Sidebar -->
-  <!-- Sidebar -->
 <aside class="sidebar" id="sidebar">
   <div>
     <h1 class="brand">
-      <span>CV GMB.</span>
-      <button id="toggleSidebar" class="sidebar-toggle" aria-label="Ciutkan sidebar" title="Ciutkan/luaskan sidebar">
-        <i class="fas fa-angle-left"></i>
-      </button>
-    </h1>
+  <span>CV GMB.</span>
+  <button id="toggleSidebar" class="sidebar-toggle" aria-label="Ciutkan sidebar" title="Ciutkan/luaskan sidebar">
+    <i class="fa-solid fa-angle-left"></i> <!-- boleh fas, tapi fa-solid adalah yang resmi di FA6 -->
+  </button>
+</h1>
 
     <div class="menu">
       <a class="<?=($_active==='dashboard'?'active':'')?>" href="<?=asset_url('pages/dashboard/index.php')?>">
