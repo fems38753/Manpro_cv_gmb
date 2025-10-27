@@ -1,21 +1,21 @@
 <?php
-// pages/penjualan/print.php — print layout mirip pages/transaksi/print.php
+// pages/penjualan/print.php — print layout + filter periode & aksi
 require_once __DIR__ . '/../../config/database.php';
 require_login();
 allow(['direktur','staff_keuangan']);
 
-$_active = 'penjualan';
+$_active    = 'penjualan';
 $page_title = 'Laporan Penjualan';
 
-// params
+// params (GET)
 $from = $_GET['from'] ?? null;
 $to   = $_GET['to'] ?? null;
 $cust = trim($_GET['customer'] ?? '');
 
 /* ---------- detect columns (robust) ---------- */
 $pk                 = pick_column('penjualan', ['id','penjualan_id','sale_id','id_penjualan']) ?: 'id';
-$date_col           = pick_date_column('penjualan');    // may be null
-$total_col          = pick_total_column('penjualan');   // may be null
+$date_col           = pick_date_column('penjualan');    // boleh null
+$total_col          = pick_total_column('penjualan');   // boleh null
 $qty_col            = pick_column('penjualan', ['qty','jumlah','quantity','qty_jual']) ?: null;
 $price_col          = pick_column('penjualan', ['harga_satuan','harga','price','harga_jual','unit_price']) ?: null;
 $customer_col       = pick_customer_column('penjualan') ?: null;
@@ -40,7 +40,6 @@ if ($product_ref_col) {
   if (table_exists('products')) {
     $pr_pk = pick_column('products', ['id','product_id']) ?: 'id';
     $pr_name = pick_column('products', ['name','nama']) ?: null;
-    // detect if product_ref_col is numeric
     $is_fk = false;
     try {
       global $pdo,$dbname;
@@ -121,17 +120,17 @@ try {
 } catch(Throwable $e){ $sumTotal = 0.0; }
 
 /* ---------- header logo (if available) ---------- */
-$logo_path = 'assets/img/logo.png'; // adjust if different
+$logo_path = 'assets/img/logo.png';
 $logo_abs  = APP_DIR . '/' . $logo_path;
 $logo_url  = is_file($logo_abs) ? asset_url($logo_path) : null;
-
-/* ---------- Render HTML (mirip transaksi print) ---------- */
-?><!doctype html>
+?>
+<!doctype html>
 <html lang="id">
 <head>
 <meta charset="utf-8">
 <title>Penjualan • CV Gelora Maju Bersama</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
   @page{size:A4 portrait;margin:16mm}
   body{font:13px/1.55 system-ui,Segoe UI,Roboto,Arial;color:#222}
@@ -139,51 +138,94 @@ $logo_url  = is_file($logo_abs) ? asset_url($logo_path) : null;
   .brand img{height:44px}
   .brand h1{margin:0;font-size:20px;color:#59382B}
   .muted{color:#7b8794}
+
+  .noprint{margin-bottom:12px}
+  .topbar{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+  .filter-form{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+  .filter-form .field{display:flex;flex-direction:column;gap:6px}
+  .filter-form label{font-size:12px;color:#7b8794}
+  .filter-form input[type="date"],
+  .filter-form input[type="text"]{
+    height:34px;border:1px solid #eadccd;border-radius:8px;padding:4px 10px;min-width:160px
+  }
+
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;border:1px solid #e9d9c3;background:#fff7e8;color:#59382B;text-decoration:none;cursor:pointer}
+  .btn:hover{filter:brightness(0.98)}
+  .btn.primary{background:#f3e6d4;border-color:#e5cfad}
+  .btn.outline{background:#fff;border:1px solid #eadccd}
+  .btn i{min-width:14px;text-align:center}
+
   .chip{display:inline-block;border:1px solid #e9d9c3;padding:8px 10px;border-radius:10px;background:#fff7e8;margin-right:8px}
   table{width:100%;border-collapse:collapse;margin-top:12px}
   thead th{font-weight:700;color:#7b8794;text-transform:uppercase;font-size:12px;padding:8px 10px;border-bottom:1px solid #eee;text-align:left}
   td,th{padding:8px 10px;border-bottom:1px solid #eee}
   .right{text-align:right}
-  .noprint{margin-bottom:12px}
-  .btn{display:inline-block;padding:8px 12px;border-radius:10px;border:1px solid #e9d9c3;background:#fff7e8;color:#59382B;text-decoration:none}
-  .btn.outline{background:#fff;border:1px solid #eadccd}
-  @media print{ .noprint{display:none} }
+
+  @media print{
+    .noprint{display:none}
+  }
 </style>
 </head>
 <body>
 
-<div class="noprint" style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+<div class="noprint topbar">
   <div style="display:flex;gap:12px;align-items:center">
     <?php if($logo_url): ?>
       <img src="<?= $logo_url ?>" alt="logo" style="height:48px;border-radius:6px;border:1px solid #eee">
     <?php endif; ?>
     <div>
-      <div class="brand">
-        <div>
-          <div style="font-weight:800;font-size:20px;color:#59382B">CV Gelora Maju Bersama</div>
-          <div class="muted">Laporan Penjualan</div>
-        </div>
-      </div>
+      <div style="font-weight:800;font-size:20px;color:#59382B">CV Gelora Maju Bersama</div>
+      <div class="muted">Laporan Penjualan</div>
     </div>
   </div>
 
-  <div style="text-align:right">
-    <div class="muted">Periode</div>
-    <?php if ($date_col && $from && $to): ?>
-      <div style="font-weight:700"><?= e(date('d M Y', strtotime($from))) ?> – <?= e(date('d M Y', strtotime($to))) ?></div>
-    <?php else: ?>
-      <div style="font-weight:700">(tanpa filter tanggal)</div>
-    <?php endif; ?>
-    <?php if ($cust !== ''): ?><div class="muted">Filter: <?= e($cust) ?></div><?php endif; ?>
-    <div style="margin-top:8px">
-      <a class="btn" href="#" onclick="window.print();return false"><i class="fas fa-print"></i> Cetak</a>
-      <a class="btn outline" href="<?= asset_url('pages/penjualan/index.php') ?>">← Kembali</a>
+  <!-- FORM FILTER: Periode & Tampilkan -->
+  <form class="filter-form" method="get" action="">
+    <div class="field">
+      <label>Dari</label>
+      <input type="date" name="from" value="<?= e($from ?? '') ?>">
     </div>
+    <div class="field">
+      <label>Sampai</label>
+      <input type="date" name="to" value="<?= e($to ?? '') ?>">
+    </div>
+    <div class="field">
+      <label>Customer (opsional)</label>
+      <input type="text" name="customer" placeholder="Nama / kode customer" value="<?= e($cust) ?>">
+    </div>
+    <button class="btn primary" type="submit"><i class="fa-solid fa-filter"></i> Tampilkan</button>
+    <?php if ($from || $to || $cust !== ''): ?>
+      <a class="btn outline" href="<?= asset_url('pages/penjualan/print.php') ?>"><i class="fa-solid fa-rotate-left"></i> Reset</a>
+    <?php endif; ?>
+  </form>
+
+  <!-- AKSI: Cetak & Kembali -->
+  <div class="actions">
+    <a class="btn" href="#" onclick="window.print();return false"><i class="fa-solid fa-print"></i> Cetak</a>
+    <a class="btn outline" href="<?= asset_url('pages/penjualan/index.php') ?>"><i class="fa-solid fa-arrow-left"></i> Kembali</a>
   </div>
 </div>
 
-<div style="margin-top:8px">
-  <div class="chip">Total Penjualan: <b><?= rupiah($sumTotal) ?></b></div>
+<!-- Ringkasan periode terpilih -->
+<div style="margin:6px 0 10px 0">
+  <span class="chip">
+    Periode:
+    <b>
+      <?php
+      if ($date_col && $from && $to) {
+        echo e(date('d M Y', strtotime($from))) . ' – ' . e(date('d M Y', strtotime($to)));
+      } else {
+        echo '(tanpa filter tanggal)';
+      }
+      ?>
+    </b>
+  </span>
+  <?php if ($cust !== ''): ?>
+    <span class="chip">Filter Customer: <b><?= e($cust) ?></b></span>
+  <?php endif; ?>
+  <span class="chip">Total Penjualan: <b><?= rupiah($sumTotal) ?></b></span>
 </div>
 
 <table>
