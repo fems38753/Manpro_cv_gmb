@@ -307,36 +307,40 @@ function previewAvatar(e){
   else { img.removeAttribute('src'); img.style.display='none'; }
 }
 
-// Toggle cepat tema (sama seperti sebelumnya)
+// Toggle cepat tema (client-side override; simpan ke akun via tombol Simpan)
 (function(){
-  const root = document.documentElement;
-  const btn  = document.getElementById('toggleTheme');
+  const root  = document.documentElement;
+  const btn   = document.getElementById('toggleTheme');
   if (!btn) return;
+
   const label = btn.querySelector('.label');
   const icon  = btn.querySelector('i');
 
-  const saved = localStorage.getItem('theme_override');
-  if (saved === 'light' || saved === 'dark') {
-    root.setAttribute('data-theme', saved);
-    const r = document.querySelector(`input[name="theme"][value="${saved}"]`);
-    if (r) r.checked = true;
-  }
-  function refreshBtn(){
+  // Jangan set apa pun di sini: layout_start.php sudah menetapkan data-theme yang benar.
+  function uiRefresh(){
     const cur = root.getAttribute('data-theme') || 'light';
-    const isDark = cur === 'dark';
+    const isDark = (cur === 'dark');
     if (label) label.textContent = isDark ? 'Light' : 'Dark';
     if (icon) { icon.classList.toggle('fa-moon', !isDark); icon.classList.toggle('fa-sun', isDark); }
   }
-  refreshBtn();
-  btn.addEventListener('click', ()=>{
+  uiRefresh();
+
+  btn.addEventListener('click', () => {
     const cur  = root.getAttribute('data-theme') || 'light';
     const next = (cur === 'dark') ? 'light' : 'dark';
+
+    // Terapkan ke UI + simpan sebagai override browser
     root.setAttribute('data-theme', next);
     localStorage.setItem('theme_override', next);
-    refreshBtn();
+
+    // Sinkronkan radio di form agar kalau user klik Simpan, preferensi akun ikut berubah
     const r = document.querySelector(`input[name="theme"][value="${next}"]`);
     if (r) r.checked = true;
+
+    // Optional hook untuk chart/komponen lain
     if (typeof window.refreshChartsTheme === 'function') window.refreshChartsTheme();
+
+    uiRefresh();
   });
 })();
 </script>

@@ -143,41 +143,64 @@ document.addEventListener('DOMContentLoaded', function () {
   const KEY = 'sb_collapsed';
   const sidebar = document.getElementById('sidebar');
   const btn = document.getElementById('toggleSidebar');
+  if (!sidebar || !btn) return;
 
-  if (!sidebar || !btn) return; // guard kalau id tidak ketemu
+  // ---------- helpers ----------
+  const isCollapsed = () => sidebar.classList.contains('collapsed');
 
-  // Terapkan status awal dari localStorage
-  if (localStorage.getItem(KEY) === '1') sidebar.classList.add('collapsed');
+  const refresh = () => {
+    const collapsed = isCollapsed();
 
-  const refreshTitles = () => {
-    const collapsed = sidebar.classList.contains('collapsed');
+    // title tooltip saat collapsed
     document.querySelectorAll('.sidebar .menu a').forEach(a => {
       const label = a.querySelector('.label')?.textContent?.trim() || '';
       if (collapsed && label) a.setAttribute('title', label);
       else a.removeAttribute('title');
     });
+
+    // ARIA + ikon panah
     btn.setAttribute('aria-expanded', String(!collapsed));
     btn.setAttribute('aria-label', collapsed ? 'Luaskan sidebar' : 'Ciutkan sidebar');
+    const icon = btn.querySelector('i');
+    if (icon) {
+      icon.classList.toggle('fa-angle-left', !collapsed);
+      icon.classList.toggle('fa-angle-right', collapsed);
+    }
   };
 
-  refreshTitles();
+  const setCollapsed = (state) => {
+    sidebar.classList.toggle('collapsed', state);
+    localStorage.setItem(KEY, state ? '1' : '0');
+    refresh();
+  };
 
-  btn.addEventListener('click', () => {
-    sidebar.classList.toggle('collapsed');
-    localStorage.setItem(KEY, sidebar.classList.contains('collapsed') ? '1' : '0');
-    refreshTitles();
-  });
+  // ---------- apply initial state (tanpa animasi pertama kali) ----------
+  const prevTransition = sidebar.style.transition;
+  sidebar.style.transition = 'none';
+  setCollapsed(localStorage.getItem(KEY) === '1');
+  requestAnimationFrame(() => { sidebar.style.transition = prevTransition || ''; });
 
-  // Opsional: auto-collapse di layar sempit
+  // ---------- events ----------
+  btn.addEventListener('click', () => setCollapsed(!isCollapsed()));
+
+  // Auto-collapse hanya saat layar sempit; tidak memaksa expand saat kembali lebar
   const mq = window.matchMedia('(max-width: 900px)');
   const applyMQ = () => {
-    if (mq.matches) { sidebar.classList.add('collapsed'); localStorage.setItem(KEY, '1'); }
-    refreshTitles();
+    if (mq.matches) setCollapsed(true);
+    else refresh(); // hormati preferensi user
   };
   mq.addEventListener?.('change', applyMQ);
   applyMQ();
+
+  // Pintasan keyboard: Ctrl/Cmd + B toggle, Esc untuk expand cepat
+  window.addEventListener('keydown', (e) => {
+    const key = (e.key || '').toLowerCase();
+    if ((e.ctrlKey || e.metaKey) && key === 'b') { e.preventDefault(); setCollapsed(!isCollapsed()); }
+    if (key === 'escape' && isCollapsed()) setCollapsed(false);
+  });
 });
 </script>
+
 
   <style>
   *{box-sizing:border-box}
