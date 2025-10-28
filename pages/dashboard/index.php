@@ -230,51 +230,59 @@ include __DIR__ . '/../_partials/layout_start.php';
 
   <!-- KPI -->
   <div class="kpi">
-    <div class="card">
-      <div class="muted">Total Produk Stok</div>
-      <h1><?= number_format($totalProdukStok) ?></h1>
-      <small class="muted">Jumlah jenis produk</small>
-    </div>
+  <!-- 1) Total Produk Stok -> stok -->
+  <a class="card linkcard" href="<?= asset_url('pages/stok/index.php') ?>">
+    <div class="muted">Total Produk Stok</div>
+    <h1><?= number_format($totalProdukStok) ?></h1>
+    <small class="muted">Jumlah jenis produk</small>
+  </a>
 
-    <div class="card">
-      <div class="muted">Total QTY Stok</div>
-      <h1><?= number_format($totalQtyStok) ?></h1>
-      <small class="muted">Unit tersedia</small>
-    </div>
+  <!-- 2) Total QTY Stok -> stok -->
+  <a class="card linkcard" href="<?= asset_url('pages/stok/index.php') ?>">
+    <div class="muted">Total QTY Stok</div>
+    <h1><?= number_format($totalQtyStok) ?></h1>
+    <small class="muted">Unit tersedia</small>
+  </a>
 
-    <div class="card">
-      <div class="muted">Total Penjualan</div>
-      <h1><?= rupiah($totalPenjualanRp) ?></h1>
-      <small class="muted">Akumulasi</small>
-    </div>
+  <!-- 3) Total Penjualan -> transaksi -->
+  <a class="card linkcard" href="<?= asset_url('pages/transaksi/index.php') ?>">
+    <div class="muted">Total Penjualan</div>
+    <h1><?= rupiah($totalPenjualanRp) ?></h1>
+    <small class="muted">Akumulasi</small>
+  </a>
 
-    <div class="card">
-      <div class="muted">Saldo (Penj−Pemb)</div>
-      <h1><?= rupiah($saldoKas) ?></h1>
-      <small class="muted">Perkiraan kas</small>
-    </div>
-  </div>
+  <!-- 4) Saldo -> transaksi -->
+  <a class="card linkcard" href="<?= asset_url('pages/transaksi/index.php') ?>">
+    <div class="muted">Saldo (Penj−Pemb)</div>
+    <h1><?= rupiah($saldoKas) ?></h1>
+    <small class="muted">Perkiraan kas</small>
+  </a>
+</div>
 
   <!-- Charts -->
   <div class="grid2">
-    <div class="card">
-      <div class="badge">Top 5 Stok</div>
-      <canvas id="chartStok" height="150"></canvas>
-    </div>
-
-    <div class="card" style="position:relative">
-      <div class="badge">Keuangan <?= e($rangeLabel) ?></div>
-      <div class="no-print" style="position:absolute;top:10px;right:10px">
-        <button id="menuBtn" class="btn outline" style="padding:6px 10px;border-radius:10px"><i class="fas fa-ellipsis-vertical"></i></button>
-        <div id="menuDrop" style="display:none;position:absolute;right:0;margin-top:6px;background:#fff;border:1px solid #eadccd;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.08);overflow:hidden;min-width:180px">
-          <a class="menuitem" href="?range=day"   style="display:block;padding:10px 12px;text-decoration:none;color:#111827">Harian (30 hari)</a>
-          <a class="menuitem" href="?range=month" style="display:block;padding:10px 12px;text-decoration:none;color:#111827">Bulanan (tahun ini)</a>
-          <a class="menuitem" href="?range=year"  style="display:block;padding:10px 12px;text-decoration:none;color:#111827">Tahunan (5 tahun)</a>
-        </div>
-      </div>
-      <canvas id="chartKeu" height="150"></canvas>
-    </div>
+  <!-- Top 5 Stok -> stok -->
+  <div class="card clickable" data-href="<?= asset_url('pages/stok/index.php') ?>">
+    <div class="badge">Top 5 Stok</div>
+    <canvas id="chartStok" height="150"></canvas>
   </div>
+
+  <!-- Keuangan -> transaksi -->
+  <div class="card clickable" data-href="<?= asset_url('pages/transaksi/index.php') ?>" style="position:relative">
+    <div class="badge">Keuangan <?= e($rangeLabel) ?></div>
+    <div class="no-print" style="position:absolute;top:10px;right:10px">
+      <button id="menuBtn" class="btn outline" style="padding:6px 10px;border-radius:10px">
+        <i class="fas fa-ellipsis-vertical"></i>
+      </button>
+      <div id="menuDrop" style="display:none;position:absolute;right:0;margin-top:6px;background:#fff;border:1px solid #eadccd;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.08);overflow:hidden;min-width:180px">
+        <a class="menuitem" href="?range=day"   style="display:block;padding:10px 12px;text-decoration:none;color:#111827">Harian (30 hari)</a>
+        <a class="menuitem" href="?range=month" style="display:block;padding:10px 12px;text-decoration:none;color:#111827">Bulanan (tahun ini)</a>
+        <a class="menuitem" href="?range=year"  style="display:block;padding:10px 12px;text-decoration:none;color:#111827">Tahunan (5 tahun)</a>
+      </div>
+    </div>
+    <canvas id="chartKeu" height="150"></canvas>
+  </div>
+</div>
 
   <!-- Transaksi terakhir -->
   <div class="card">
@@ -306,6 +314,25 @@ include __DIR__ . '/../_partials/layout_start.php';
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // buat card ber-href jadi bisa diklik & accessible
+  document.querySelectorAll('.card.clickable[data-href]').forEach((el) => {
+    el.setAttribute('role','link');
+    el.setAttribute('tabindex','0');
+
+    function go(e){
+      // abaikan klik pada elemen interaktif di dalam card
+      if (e.target.closest('a, button, .menuitem, input, select, label')) return;
+      const url = el.getAttribute('data-href');
+      if (url) window.location.href = url;
+    }
+
+    el.addEventListener('click', go);
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(e); }
+    });
+  });
+</script>
 <script>
   // dropdown
   const btn  = document.getElementById('menuBtn');
