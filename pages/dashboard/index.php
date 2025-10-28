@@ -314,25 +314,7 @@ include __DIR__ . '/../_partials/layout_start.php';
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-  // buat card ber-href jadi bisa diklik & accessible
-  document.querySelectorAll('.card.clickable[data-href]').forEach((el) => {
-    el.setAttribute('role','link');
-    el.setAttribute('tabindex','0');
 
-    function go(e){
-      // abaikan klik pada elemen interaktif di dalam card
-      if (e.target.closest('a, button, .menuitem, input, select, label')) return;
-      const url = el.getAttribute('data-href');
-      if (url) window.location.href = url;
-    }
-
-    el.addEventListener('click', go);
-    el.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(e); }
-    });
-  });
-</script>
 <script>
   // dropdown
   const btn  = document.getElementById('menuBtn');
@@ -404,6 +386,26 @@ include __DIR__ . '/../_partials/layout_start.php';
       plugins: { legend: { position: 'top' } },
       scales: { y: { ticks: { callback: v => new Intl.NumberFormat('id-ID').format(v) } } }
     }
+  });
+</script>
+
+<script>
+  // buat card ber-href jadi bisa diklik & accessible
+  document.querySelectorAll('.card.clickable[data-href]').forEach((el) => {
+    el.setAttribute('role','link');
+    el.setAttribute('tabindex','0');
+
+    function go(e){
+      // abaikan klik pada elemen interaktif di dalam card
+      if (e.target.closest('a, button, .menuitem, input, select, label')) return;
+      const url = el.getAttribute('data-href');
+      if (url) window.location.href = url;
+    }
+
+    el.addEventListener('click', go);
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(e); }
+    });
   });
 </script>
 

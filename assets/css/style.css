@@ -370,3 +370,8 @@ html[data-theme="dark"]{ --hover: rgba(255,187,56,.10); }
   border-color: color-mix(in srgb, #2ecc71 65%, var(--line));
 }
 
+.linkcard { text-decoration: none; color: inherit; display: block; }
+  .card.clickable { cursor: pointer; }
+  .card.clickable:hover { filter: brightness(1.02); }
+  .card.clickable:focus-within { outline: 2px solid var(--brand-2, #B7771D); outline-offset: 4px; border-radius: 14px; }
+  
