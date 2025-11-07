@@ -213,7 +213,6 @@ include __DIR__ . '/../_partials/layout_start.php';
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
       <div><label>Tanggal</label><input type="date" name="tgl_pembelian" required value="<?=e($_POST['tgl_pembelian'] ?? $p['date'])?>"></div>
-      <div><label>No. Invoice</label><input type="text" name="invoice_no" value="<?=e($_POST['invoice_no'] ?? $p['invoice_no'])?>"></div>
     </div>
 
     <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;margin-top:12px">

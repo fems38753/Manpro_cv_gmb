@@ -31,32 +31,60 @@ if (table_exists('stock_balances')) {
 }
 
 /* ===== KPI: Penjualan & Pembelian ===== */
+/* ===== KPI: Penjualan & Pembelian (modern-first) ===== */
 $totalPenjualanRp = 0.0;
-if (table_exists('penjualan')) {
-  $penjTotalCol = pick_total_column('penjualan') ?? null;
-  if ($penjTotalCol) {
-    $totalPenjualanRp = (float)(fetch("SELECT COALESCE(SUM(`$penjTotalCol`),0) s FROM penjualan")['s'] ?? 0);
-  } else {
-    // if no total column, try summing qty*harga_satuan (best-effort)
-    if (column_exists('penjualan','qty') && column_exists('penjualan','harga_satuan')) {
-      $totalPenjualanRp = (float)(fetch("SELECT COALESCE(SUM(qty * harga_satuan),0) s FROM penjualan")['s'] ?? 0);
+$totalPembelianRp = 0.0;
+
+/* 1) Prefer transaksi_keuangan bila ada */
+if (table_exists('transaksi_keuangan')) {
+  $rowIn  = fetch("SELECT COALESCE(SUM(nominal),0) s FROM transaksi_keuangan WHERE tipe='pendapatan'");
+  $rowOut = fetch("SELECT COALESCE(SUM(nominal),0) s FROM transaksi_keuangan WHERE tipe='pengeluaran'");
+  $totalPenjualanRp = (float)($rowIn['s'] ?? 0);
+  $totalPembelianRp = (float)($rowOut['s'] ?? 0);
+} else {
+  /* 2) Pakai skema baru: sales/purchases */
+  if (table_exists('sales')) {
+    $salesTotalCol = pick_total_column('sales') ?: pick_column('sales', ['total','grand_total','jumlah_total','nilai_total']);
+    if ($salesTotalCol) {
+      $totalPenjualanRp = (float)(fetch("SELECT COALESCE(SUM(`$salesTotalCol`),0) s FROM sales")['s'] ?? 0);
+    } else {
+      // fallback: sum subtotal + tax bila ada
+      $sub = column_exists('sales','subtotal') ? '`subtotal`' : '0';
+      $tax = column_exists('sales','tax') ? '`tax`' : '0';
+      $totalPenjualanRp = (float)(fetch("SELECT COALESCE(SUM($sub+$tax),0) s FROM sales")['s'] ?? 0);
+    }
+  } elseif (table_exists('penjualan')) {
+    // skema lama
+    $penjTotalCol = pick_total_column('penjualan');
+    if ($penjTotalCol) {
+      $totalPenjualanRp = (float)(fetch("SELECT COALESCE(SUM(`$penjTotalCol`),0) s FROM penjualan")['s'] ?? 0);
+    } elseif (column_exists('penjualan','qty') && column_exists('penjualan','harga_satuan')) {
+      $totalPenjualanRp = (float)(fetch("SELECT COALESCE(SUM(qty*harga_satuan),0) s FROM penjualan")['s'] ?? 0);
     }
   }
-}
 
-$totalPembelianRp = 0.0;
-if (table_exists('pembelian')) {
-  $pembTotalCol = pick_total_column('pembelian') ?? null;
-  if ($pembTotalCol) {
-    $totalPembelianRp = (float)(fetch("SELECT COALESCE(SUM(`$pembTotalCol`),0) s FROM pembelian")['s'] ?? 0);
-  } else {
-    if (column_exists('pembelian','qty') && column_exists('pembelian','harga_satuan')) {
-      $totalPembelianRp = (float)(fetch("SELECT COALESCE(SUM(qty * harga_satuan),0) s FROM pembelian")['s'] ?? 0);
+  if (table_exists('purchases')) {
+    $purchTotalCol = pick_total_column('purchases') ?: pick_column('purchases', ['total','grand_total','jumlah_total','nilai_total']);
+    if ($purchTotalCol) {
+      $totalPembelianRp = (float)(fetch("SELECT COALESCE(SUM(`$purchTotalCol`),0) s FROM purchases")['s'] ?? 0);
+    } else {
+      $sub = column_exists('purchases','subtotal') ? '`subtotal`' : '0';
+      $tax = column_exists('purchases','tax') ? '`tax`' : '0';
+      $totalPembelianRp = (float)(fetch("SELECT COALESCE(SUM($sub+$tax),0) s FROM purchases")['s'] ?? 0);
+    }
+  } elseif (table_exists('pembelian')) {
+    // skema lama
+    $pembTotalCol = pick_total_column('pembelian');
+    if ($pembTotalCol) {
+      $totalPembelianRp = (float)(fetch("SELECT COALESCE(SUM(`$pembTotalCol`),0) s FROM pembelian")['s'] ?? 0);
+    } elseif (column_exists('pembelian','qty') && column_exists('pembelian','harga_satuan')) {
+      $totalPembelianRp = (float)(fetch("SELECT COALESCE(SUM(qty*harga_satuan),0) s FROM pembelian")['s'] ?? 0);
     }
   }
 }
 
 $saldoKas = $totalPenjualanRp - $totalPembelianRp;
+
 
 /* ===== Top 5 Stok ===== */
 $topStok = [];

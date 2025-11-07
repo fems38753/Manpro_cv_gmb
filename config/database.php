@@ -341,12 +341,23 @@ function top_stok_rows(int $limit=5): array {
   return fetchAll("SELECT $nameCol AS label, $qtyCol AS value FROM stok ORDER BY $qtyCol DESC LIMIT ?", [$limit]);
 }
 
-/* ===== Misc helpers ===== */
-/**
- * Reset permission cache for a user (panggil jika role/perm diubah)
- */
-function reset_user_permissions_cache(int $user_id): void {
-  if (isset($_SESSION['_perms_cache'][$user_id])) unset($_SESSION['_perms_cache'][$user_id]);
+/* ===== Keuangan Helper (insert dinamis) ===== */
+function insert_finance_tx(string $tgl, string $tipe, float $nominal, string $ket = '', ?int $user_id = null): void {
+  if (!table_exists('transaksi_keuangan')) return;
+
+  // kolom wajib yang nyaris selalu ada
+  $cols = ['tgl_transaksi','tipe','nominal','keterangan'];
+  $vals = [$tgl, $tipe, $nominal, $ket];
+
+  // created_by hanya kalau kolomnya ada
+  if (column_exists('transaksi_keuangan','created_by') && $user_id !== null) {
+    $cols[] = 'created_by';
+    $vals[] = $user_id;
+  }
+
+  $fields = implode(', ', array_map(fn($c)=>"`$c`", $cols));
+  $marks  = implode(', ', array_fill(0, count($cols), '?'));
+  query("INSERT INTO transaksi_keuangan ($fields) VALUES ($marks)", $vals);
 }
 
 /* ===== End of config ===== */
