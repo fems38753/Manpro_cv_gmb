@@ -186,7 +186,6 @@ if (!function_exists('rupiah')) {
           <option value="minggu" <?= $range==='minggu' ? 'selected' : '' ?>>Minggu ini</option>
           <option value="bulan"  <?= $range==='bulan'  ? 'selected' : '' ?>>Bulan ini</option>
           <option value="tahun"  <?= $range==='tahun'  ? 'selected' : '' ?>>Tahun ini</option>
-          <option value="custom" <?= $range==='custom' ? 'selected' : '' ?>>Custom</option>
         </select>
       </div>
       <div class="field">

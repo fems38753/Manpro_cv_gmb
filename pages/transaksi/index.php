@@ -144,7 +144,6 @@ include __DIR__ . '/../_partials/layout_start.php';
       <option value="minggu" <?= $range==='minggu'?'selected':'' ?>>Minggu ini</option>
       <option value="bulan"  <?= $range==='bulan'?'selected':'' ?>>Bulan ini</option>
       <option value="tahun"  <?= $range==='tahun'?'selected':'' ?>>Tahun ini</option>
-      <option value="custom" <?= $range==='custom'?'selected':'' ?>>Custom</option>
     </select>
 
     <label>Dari</label><input type="date" name="from" value="<?= e($from) ?>">

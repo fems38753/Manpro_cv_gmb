@@ -97,7 +97,7 @@ include __DIR__ . '/../_partials/layout_start.php';
   </div>
 
   <form class="no-print" method="get" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
-    <input type="text" name="q" placeholder="Cari nama atau SKU..." value="<?= e($q) ?>">
+    <input type="text" name="q" placeholder="Cari nama Batik" value="<?= e($q) ?>">
 
     <?php if ($kategories): ?>
       <select name="kategori">

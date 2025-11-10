@@ -243,10 +243,6 @@ include __DIR__ . '/../_partials/layout_start.php';
         <div class="muted" style="font-size:12px">Contoh: Kain Batik Floral</div>
       </div>
       <div>
-        <label>SKU (opsional)</label>
-        <input type="text" name="sku" value="<?= e($_POST['sku'] ?? '') ?>">
-      </div>
-      <div>
         <label>Gudang</label>
         <select name="warehouse_id">
           <?php
