@@ -179,17 +179,21 @@ if ($has_start) include __DIR__ . '/../_partials/layout_start.php';
           <?php if($is_director): ?>
           <td class="no-print actions-td" style="white-space:nowrap">
           
-            <a class="icon-btn neutral" title="Edit Pembelian" href="<?=asset_url('pages/pegawai/edit.php?id='.$r['user_id'])?>">
+            <a class="icon-btn neutral" title="Edit Pegawai" href="<?=asset_url('pages/pegawai/edit.php?id='.$r['user_id'])?>">
+
               <i class="fas fa-pen"></i>
             </a>
             
-            <form method="post" action="<?=asset_url('pages/pembelian/delete.php')?>" style="display:inline" onsubmit="return confirm('Hapus pembelian ini?')">
-              <input type="hidden" name="csrf" value="<?=csrf_token()?>">
-              <input type="hidden" name="id" value="<?= (int)$r['user_id'] ?>">
-              <button class="icon-btn danger" type="submit" title="Hapus Pembelian">
-                <i class="fas fa-trash"></i>
-              </button>
-            </form>
+            <form method="post"
+      action="<?= asset_url('pages/pegawai/delete.php') ?>"
+      style="display:inline"
+      onsubmit="return confirm('Hapus akun pegawai ini?')">
+  <input type="hidden" name="csrf" value="<?= csrf_token() ?>">
+  <input type="hidden" name="id" value="<?= (int)$r['user_id'] ?>">
+  <button class="icon-btn danger" type="submit" title="Hapus Pegawai">
+    <i class="fas fa-trash"></i>
+  </button>
+</form>
           </td>
           <?php endif; ?>
         </tr>
